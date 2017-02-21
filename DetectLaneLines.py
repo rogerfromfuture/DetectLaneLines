@@ -73,6 +73,47 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
         for x1, y1, x2, y2 in line:
             cv2.line(img, (x1, y1), (x2, y2), color, thickness)
 
+def draw_one_line(img, lines, color=[255, 0, 0], thickness=10):
+    imageShape = img.shape
+    bottomLeftX = imageShape[1] + 1
+    bottomLeftY = 0
+    topLeftX = 0
+    topLeftY = imageShape[0] + 1
+    bottomRightX = 0
+    bottomRightY = 0
+    topRightX = imageShape[1] + 1
+    topRightY = imageShape[0] + 1
+    leftSlopeArray = []
+    rightSlopeArray = []
+
+    for line in lines:
+        for x1, y1, x2, y2 in line:
+            slope = (y2 - y1) / (x2 - x1)
+            if slope < 0:
+                bottomLeftX = min(bottomLeftX, x1, x2)
+                bottomLeftY = max(bottomLeftY, y1, y2)
+                topLeftX = max(topLeftX, x1, x2)
+                topLeftY = min(topLeftY, y1, y2)
+                leftSlopeArray.append(slope)
+            elif slope > 0:
+                bottomRightX = max(bottomRightX, x1, x2)
+                bottomRightY = max(bottomRightY, y1, y2)
+                topRightX = min(topRightX, x1, x2)
+                topRightY = min(topRightY, y1, y2)
+                rightSlopeArray.append(slope)
+
+    y = 350
+    if len(leftSlopeArray) > 0:
+        leftPercentileSlope = np.percentile(leftSlopeArray, 60)
+        topLeftX = int((y - bottomLeftY) / leftPercentileSlope + bottomLeftX)
+        topLeftY = y
+        cv2.line(img, (bottomLeftX, bottomLeftY), (topLeftX, topLeftY), color, thickness)
+
+    if len(rightSlopeArray) > 0:
+        rightPercentileSlope = np.percentile(rightSlopeArray, 60)
+        topRightX = int((y - bottomRightY) / rightPercentileSlope + bottomRightX)
+        topRightY = y
+        cv2.line(img, (bottomRightX, bottomRightY), (topRightX, topRightY), color, thickness)
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     """
@@ -83,7 +124,7 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len,
                             maxLineGap=max_line_gap)
     line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
-    draw_lines(line_img, lines)
+    draw_one_line(line_img, lines)
     return line_img
 
 
@@ -162,7 +203,7 @@ def show_processed_image(image):
     processed_image = process_image(image)
     plt.imshow(processed_image)
 
-def output_videos():
+def save_videos():
     # Import everything needed to edit/save/watch video clips
     from moviepy.editor import VideoFileClip
 
@@ -180,5 +221,6 @@ plt.interactive(True)
 image = mpimg.imread('test_images/whiteCarLaneSwitch.jpg')
 print('This image is:', type(image), 'with dimesions:', image.shape)
 #show_processed_image(image)
-save_processed_images()
-#output_videos()
+#save_processed_images()
+save_videos()
+pass
