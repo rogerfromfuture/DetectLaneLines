@@ -37,6 +37,13 @@ The top X,Y of the coordinates are figured so they could be drawn
 
 I provided two videos for each white and yellow videos, one is with straight line the other is with raw hough lines
 in the processed folder
+raw lines:
+https://raw.githubusercontent.com/rogerfromfuture/DetectLaneLines/master/processed/white_raw_houghlines.mp4
+https://raw.githubusercontent.com/rogerfromfuture/DetectLaneLines/master/processed/yellow_raw_houghlines.mp4
+
+Straight lines
+https://raw.githubusercontent.com/rogerfromfuture/DetectLaneLines/master/processed/white.mp4
+https://raw.githubusercontent.com/rogerfromfuture/DetectLaneLines/master/processed/yellow.mp4
 
 ###2. Identify potential shortcomings with my current pipeline
 1) If the slope is not by average change dramatically from frame to frame then in the video it will look jittering
