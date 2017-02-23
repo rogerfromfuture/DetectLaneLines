@@ -1,10 +1,11 @@
-#importing some useful packages
+# importing some useful packages
 import math
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 import cv2
 import os
+
 
 def grayscale(img):
     """Applies the Grayscale transform
@@ -73,49 +74,43 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
         for x1, y1, x2, y2 in line:
             cv2.line(img, (x1, y1), (x2, y2), color, thickness)
 
+
 def draw_one_line(img, lines, color=[255, 0, 0], thickness=10):
-    imageShape = img.shape
-    bottomLeftX = imageShape[1] + 1
-    bottomLeftY = 0
-    topLeftX = 0
-    topLeftY = imageShape[0] + 1
-    bottomRightX = 0
-    bottomRightY = 0
-    topRightX = imageShape[1] + 1
-    topRightY = imageShape[0] + 1
-    leftSlopeArray = []
-    rightSlopeArray = []
+    image_shape = img.shape
+    bottom_left_x = image_shape[1] + 1
+    bottom_left_y = 0
+    bottom_right_x = 0
+    bottom_right_y = 0
+    left_slope_array = []
+    right_slope_array = []
 
     for line in lines:
         for x1, y1, x2, y2 in line:
             slope = (y2 - y1) / (x2 - x1)
             if slope < 0:
-                bottomLeftX = min(bottomLeftX, x1, x2)
-                bottomLeftY = max(bottomLeftY, y1, y2)
-                topLeftX = max(topLeftX, x1, x2)
-                topLeftY = min(topLeftY, y1, y2)
-                leftSlopeArray.append(slope)
+                bottom_left_x = min(bottom_left_x, x1, x2)
+                bottom_left_y = max(bottom_left_y, y1, y2)
+                left_slope_array.append(slope)
             elif slope > 0:
-                bottomRightX = max(bottomRightX, x1, x2)
-                bottomRightY = max(bottomRightY, y1, y2)
-                topRightX = min(topRightX, x1, x2)
-                topRightY = min(topRightY, y1, y2)
-                rightSlopeArray.append(slope)
+                bottom_right_x = max(bottom_right_x, x1, x2)
+                bottom_right_y = max(bottom_right_y, y1, y2)
+                right_slope_array.append(slope)
 
-    y = 350
-    if len(leftSlopeArray) > 0:
-        leftPercentileSlope = np.percentile(leftSlopeArray, 60)
-        topLeftX = int((y - bottomLeftY) / leftPercentileSlope + bottomLeftX)
-        topLeftY = y
-        cv2.line(img, (bottomLeftX, bottomLeftY), (topLeftX, topLeftY), color, thickness)
+    upper_y_boundary = 350
+    if len(left_slope_array) > 0:
+        leftPercentileSlope = np.percentile(left_slope_array, 50)
+        topLeftX = int((upper_y_boundary - bottom_left_y) / leftPercentileSlope + bottom_left_x)
+        topLeftY = upper_y_boundary
+        cv2.line(img, (bottom_left_x, bottom_left_y), (topLeftX, topLeftY), color, thickness)
 
-    if len(rightSlopeArray) > 0:
-        rightPercentileSlope = np.percentile(rightSlopeArray, 60)
-        topRightX = int((y - bottomRightY) / rightPercentileSlope + bottomRightX)
-        topRightY = y
-        cv2.line(img, (bottomRightX, bottomRightY), (topRightX, topRightY), color, thickness)
+    if len(right_slope_array) > 0:
+        rightPercentileSlope = np.percentile(right_slope_array, 50)
+        topRightX = int((upper_y_boundary - bottom_right_y) / rightPercentileSlope + bottom_right_x)
+        topRightY = upper_y_boundary
+        cv2.line(img, (bottom_right_x, bottom_right_y), (topRightX, topRightY), color, thickness)
 
-def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
+
+def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap, thickness=2, raw_hough_lines=True):
     """
     `img` should be the output of a Canny transform.
 
@@ -124,7 +119,11 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len,
                             maxLineGap=max_line_gap)
     line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
-    draw_one_line(line_img, lines)
+
+    if raw_hough_lines:
+        draw_lines(line_img, lines, [255, 0, 0], thickness)
+    else:
+        draw_one_line(line_img, lines, [255, 0, 0], thickness)
     return line_img
 
 
@@ -144,7 +143,8 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
     """
     return cv2.addWeighted(initial_img, α, img, β, λ)
 
-def process_image(image):
+
+def process_image(image, raw_hough_lines=False, thickness=10):
     # Grayscale original image
     processed_image = grayscale(image)
 
@@ -167,12 +167,12 @@ def process_image(image):
 
     # Define the Hough transform parameters
     # Make a blank the same size as our image to draw on
-    rho = 1  # distance resolution in pixels of the Hough grid
+    rho = 2  # distance resolution in pixels of the Hough grid
     theta = np.pi / 180  # angular resolution in radians of the Hough grid
-    threshold = 5  # minimum number of votes (intersections in Hough grid cell)
-    min_line_length = 10  # minimum number of pixels making up a line
-    max_line_gap = 5  # maximum gap in pixels between connectable line segments
-    processed_image = hough_lines(processed_image, rho, theta, threshold, min_line_length, max_line_gap)
+    threshold = 15  # minimum number of votes (intersections in Hough grid cell)
+    min_line_length = 30  # minimum number of pixels making up a line
+    max_line_gap = 10  # maximum gap in pixels between connectable line segments
+    processed_image = hough_lines(processed_image, rho, theta, threshold, min_line_length, max_line_gap, thickness, raw_hough_lines)
     processed_image = weighted_img(processed_image, image)
 
     return processed_image
@@ -190,7 +190,7 @@ def save_processed_images():
 
         # Print out processed image
         fileProcessedFullPath = 'test_images/processed_' + fileName
-        processed_image = process_image(image)
+        processed_image = process_image(image, True, 2)
         plt.imshow(processed_image)
 
         if os.path.exists(fileProcessedFullPath):
@@ -199,9 +199,11 @@ def save_processed_images():
         # Save processed image to test_images/
         mpimg.imsave(fileProcessedFullPath, processed_image)
 
+
 def show_processed_image(image):
     processed_image = process_image(image)
     plt.imshow(processed_image)
+
 
 def save_videos():
     # Import everything needed to edit/save/watch video clips
@@ -209,7 +211,7 @@ def save_videos():
 
     white_output = 'white.mp4'
     clip1 = VideoFileClip("solidWhiteRight.mp4")
-    white_clip = clip1.fl_image(process_image)  # NOTE: this function expects color images!!
+    white_clip = clip1.fl_image(process_image)
     white_clip.write_videofile(white_output, audio=False)
 
     yellow_output = 'yellow.mp4'
@@ -217,10 +219,11 @@ def save_videos():
     yellow_clip = clip2.fl_image(process_image)
     yellow_clip.write_videofile(yellow_output, audio=False)
 
+
 plt.interactive(True)
 image = mpimg.imread('test_images/whiteCarLaneSwitch.jpg')
 print('This image is:', type(image), 'with dimesions:', image.shape)
-#show_processed_image(image)
+show_processed_image(image)
 #save_processed_images()
 save_videos()
 pass
